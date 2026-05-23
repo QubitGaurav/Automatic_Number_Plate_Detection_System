@@ -79,23 +79,44 @@ class VehicleIntelligencePipeline:
 
     def annotate_image(self, image, results, vehicles):
         """
-        Draw bounding boxes and text on the image for visualization.
+        Draw premium bounding boxes and text overlays on the image.
         """
         annotated = image.copy()
+        
+        # Color palette (BGR format)
+        vehicle_color = (255, 144, 30) # Premium Sky Blue/Orange
+        plate_color = (0, 215, 255) # Gold/Amber
+        text_bg_color = (15, 15, 15)
+        text_color = (255, 255, 255)
         
         # Draw vehicle boxes
         for v in vehicles:
             vx1, vy1, vx2, vy2 = v['box']
-            cv2.rectangle(annotated, (vx1, vy1), (vx2, vy2), (255, 0, 0), 2)
-            cv2.putText(annotated, f"Vehicle: {v['confidence']:.2f}", (vx1, max(10, vy1 - 10)), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+            cv2.rectangle(annotated, (vx1, vy1), (vx2, vy2), vehicle_color, 2)
+            
+            # Label
+            label = f"Vehicle: {v['confidence']:.1%}"
+            (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+            # Ensure label fits within image bounds
+            lbl_y1 = max(h + 15, vy1)
+            cv2.rectangle(annotated, (vx1, lbl_y1 - h - 10), (vx1 + w + 10, lbl_y1), text_bg_color, -1)
+            cv2.putText(annotated, label, (vx1 + 5, lbl_y1 - 5), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1, cv2.LINE_AA)
                         
         # Draw plate boxes and text
         for res in results:
             px1, py1, px2, py2 = res['plate_box']
             text = res['plate_text']
-            cv2.rectangle(annotated, (px1, py1), (px2, py2), (0, 255, 0), 2)
-            cv2.putText(annotated, f"Plate: {text}", (px1, max(10, py1 - 10)), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            conf = res['plate_confidence']
+            
+            cv2.rectangle(annotated, (px1, py1), (px2, py2), plate_color, 3)
+            
+            # Label
+            label = f"Plate: {text} ({conf:.1%})" if text else f"Plate: {conf:.1%}"
+            (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
+            lbl_y1 = max(h + 15, py1)
+            cv2.rectangle(annotated, (px1, lbl_y1 - h - 10), (px1 + w + 10, lbl_y1), text_bg_color, -1)
+            cv2.putText(annotated, label, (px1 + 5, lbl_y1 - 5), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, text_color, 2, cv2.LINE_AA)
                         
         return annotated

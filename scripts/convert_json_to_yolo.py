@@ -6,8 +6,9 @@ def convert_json_to_yolo():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     root_dir = os.path.dirname(script_dir)
     
-    labels_dir = os.path.join(root_dir, 'data', 'labels')
-    images_dir = os.path.join(root_dir, 'data', 'images')
+    # Use the repository's Dataset/ folder (matches README and workspace)
+    labels_dir = os.path.join(root_dir, 'Dataset', 'labels')
+    images_dir = os.path.join(root_dir, 'Dataset', 'images')
     # Ensure the labels directory exists; create it if missing
     if not os.path.isdir(labels_dir):
         os.makedirs(labels_dir, exist_ok=True)
