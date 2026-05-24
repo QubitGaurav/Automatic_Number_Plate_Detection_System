@@ -1,0 +1,12 @@
+--extra-index-url https://download.pytorch.org/whl/cu126
+
+torch==2.6.0
+ultralytics>=8.3.0
+opencv-python-headless>=4.10.0
+numpy>=1.26,<2.0
+Pillow>=10.4.0
+pandas>=2.2.0
+pyyaml>=6.0
+easyocr>=1.7.2
+streamlit>=1.40.0
+pytesseract>=0.3.13

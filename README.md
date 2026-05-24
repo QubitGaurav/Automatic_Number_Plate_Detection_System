@@ -73,26 +73,44 @@ cv2.imwrite('output.jpg', annotated_img)
 
 ## Data Preparation and Training
 
-To improve the accuracy of license plate detection, you can fine-tune the YOLOv8 model using a custom dataset.
+To improve the accuracy of license plate detection, fine-tune YOLO11 on the JSON labels in `Dataset/labels`.
 
-1. **Prepare the Dataset**: 
-   Place your images and JSON annotations in the `Dataset/` directory. Run the conversion script to format the annotations for YOLO:
+1. **Prepare the Python environment**
+   Recommended on Ubuntu 22.04:
+   ```bash
+   sudo apt update
+   sudo apt install -y python3.11 python3.11-venv build-essential
+   python3.11 -m venv .venv
+   source .venv/bin/activate
+   python -m pip install --upgrade pip
+   python -m pip install -r requirements-gpu.txt
+   ```
+
+2. **Convert the dataset annotations**
    ```bash
    python scripts/convert_json_to_yolo.py
    ```
 
-2. **Configure `data.yaml`**:
-   Ensure `data.yaml` correctly points to your `train` and `val` image directories and specifies the correct number of classes (`nc`).
+3. **Configure `data.yaml`**
+   The repository already uses a portable `path: ./Dataset` setup. Verify the dataset still contains:
+   - `Dataset/images`
+   - `Dataset/labels`
 
-3. **Train the Model**:
-   Execute the training script to begin fine-tuning:
+4. **Train the model**
+   For a GTX 1650, start with `yolo11n.pt` and a conservative batch size:
    ```bash
-   python scripts/train_yolov8.py
+   python scripts/train_yolo11.py --epochs 50 --batch 8 --imgsz 640 --device 0
    ```
-   The best weights will be saved in the `runs/detect/train/weights/` directory. You can update the `models/plate_detector.py` to use these new custom weights.
+
+   If you want to test the training flow without GPU, use:
+   ```bash
+   python scripts/train_yolo11.py --epochs 1 --batch 2 --device cpu
+   ```
+
+   The best checkpoint is saved to `runs/license_plate_detector/weights/best.pt` and the app will automatically pick it up through `models/plate_detector.py`.
 
 ## License & Acknowledgements
-Built using Ultralytics YOLOv8, Streamlit, and EasyOCR.
+Built using Ultralytics YOLO11, Streamlit, and EasyOCR.
 
 ## Dataset
 https://drive.google.com/file/d/1WpOjFnPfj-tfmHrUaJ7ypQLUsFqrJhAx/view?usp=sharing

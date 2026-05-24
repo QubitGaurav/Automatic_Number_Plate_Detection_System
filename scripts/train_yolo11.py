@@ -1,150 +1,161 @@
-import os
-import json
-import glob
 import argparse
+import os
+import sys
+from pathlib import Path
+
 import torch
 from ultralytics import YOLO
-from PIL import Image
 
-def convert_json_to_yolo(dataset_path):
-    images_dir = os.path.join(dataset_path, 'images')
-    labels_dir = os.path.join(dataset_path, 'labels')
-    
-    if not os.path.exists(labels_dir) or not os.path.exists(images_dir):
-        print(f"Warning: Ensure {images_dir} and {labels_dir} exist.")
-        return
-        
-    print("Checking for required JSON to YOLO label conversion...")
-    converted_count = 0
-    for filename in os.listdir(labels_dir):
-        if not filename.endswith('.json'):
-            continue
-            
-        json_path = os.path.join(labels_dir, filename)
-        txt_path = os.path.join(labels_dir, filename.replace('.json', '.txt'))
-        
-        if os.path.exists(txt_path):
-            continue
-            
-        base_name = filename.replace('.json', '')
-        image_files = glob.glob(os.path.join(images_dir, f"{base_name}.*"))
-        image_files = [f for f in image_files if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        
-        if not image_files:
-            continue
-            
-        image_path = image_files[0]
-        try:
-            with Image.open(image_path) as img:
-                img_width, img_height = img.size
-        except:
-            continue
-            
-        with open(json_path, 'r') as f:
-            try:
-                data = json.load(f)
-            except:
-                continue
-                
-        yolo_lines = []
-        for obj in data:
-            class_id = 0
-            x_min = obj['x']
-            y_min = obj['y']
-            width = obj['width']
-            height = obj['height']
-            
-            x_center = x_min + (width / 2.0)
-            y_center = y_min + (height / 2.0)
-            
-            x_center_norm = x_center / img_width
-            y_center_norm = y_center / img_height
-            width_norm = width / img_width
-            height_norm = height / img_height
-            
-            yolo_lines.append(f"{class_id} {x_center_norm:.6f} {y_center_norm:.6f} {width_norm:.6f} {height_norm:.6f}")
-            
-        with open(txt_path, 'w') as f:
-            f.write('\n'.join(yolo_lines))
-        converted_count += 1
-        
-    if converted_count > 0:
-        print(f"Successfully converted {converted_count} JSON labels to YOLO .txt format.")
-    else:
-        print("No new JSON labels needed conversion.")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from convert_json_to_yolo import convert_json_to_yolo
 
-def train(epochs=1, subset=False):
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.abspath(os.path.join(script_dir, '..'))
-    
-    dataset_dir = os.path.join(project_root, 'Dataset')
-    data_yaml_path = os.path.join(project_root, 'data.yaml')
-    runs_dir = os.path.join(project_root, 'runs')
 
-    convert_json_to_yolo(dataset_dir)
+def resolve_device(device_arg):
+    if device_arg is None:
+        device_arg = "auto"
 
-    print(f"Starting Highly Optimized YOLO11 training using: {data_yaml_path} for {epochs} epochs")
+    if device_arg == "auto":
+        if torch.cuda.is_available():
+            return 0
+        return "cpu"
 
-    model = YOLO("yolo11s.pt")
+    if isinstance(device_arg, int):
+        return device_arg
 
-    # Decide device automatically
-    device_arg = 0 if torch.cuda.is_available() else 'cpu'
-    if device_arg == 0:
-        try:
-            device_name = torch.cuda.get_device_name(0)
-        except Exception:
-            device_name = 'cuda:0'
-        print(f"Using GPU: {device_name}")
-    else:
-        print("No CUDA device detected — falling back to CPU")
+    if device_arg in {"cpu", "mps", "cuda"}:
+        return device_arg
+
+    try:
+        return int(device_arg)
+    except ValueError as exc:
+        raise ValueError(f"Unsupported device value: {device_arg}") from exc
+
+
+def get_device_name(device_arg):
+    if device_arg == "cpu":
+        return "CPU"
+
+    if device_arg == "mps":
+        return "Apple MPS"
+
+    if device_arg == 0 and torch.cuda.is_available():
+        return torch.cuda.get_device_name(0)
+
+    return f"CUDA:{device_arg}" if isinstance(device_arg, int) else str(device_arg)
+
+
+def train(
+    epochs=50,
+    imgsz=640,
+    batch=8,
+    workers=4,
+    base_model="yolo11n.pt",
+    device_arg="auto",
+    project="runs",
+    name="license_plate_detector",
+    patience=20,
+):
+    project_root = Path(__file__).resolve().parent.parent
+    dataset_dir = project_root / "Dataset"
+    data_yaml_path = project_root / "data.yaml"
+
+    if not data_yaml_path.exists():
+        raise FileNotFoundError(f"Missing dataset config: {data_yaml_path}")
+
+    if not dataset_dir.exists():
+        raise FileNotFoundError(f"Missing dataset directory: {dataset_dir}")
+
+    labels_dir = dataset_dir / "labels"
+    images_dir = dataset_dir / "images"
+    if not labels_dir.exists() or not images_dir.exists():
+        raise FileNotFoundError(
+            f"Expected both {labels_dir} and {images_dir} to exist before training."
+        )
+
+    convert_json_to_yolo(str(dataset_dir))
+
+    device = resolve_device(device_arg)
+    print(f"Using device: {get_device_name(device)}")
+
+    if device == "cpu":
+        batch = min(batch, 2)
+        workers = 0
+    elif device == 0:
+        torch.cuda.empty_cache()
 
     train_kwargs = dict(
-        data=data_yaml_path,
+        data=str(data_yaml_path),
         epochs=epochs,
-        imgsz=640,
-        batch=8,
-        workers=4,
+        imgsz=imgsz,
+        batch=batch,
+        workers=workers,
         cache=False,
-        device=device_arg,
+        device=device,
         optimizer="AdamW",
-        project="runs",
-        name="license_plate_detector",
-        patience=20,
+        project=str(project),
+        name=name,
+        patience=patience,
+        amp=True,
+        plots=True,
+        save=True,
+        val=True,
+        seed=42,
+        lr0=0.01,
+        close_mosaic=10,
     )
 
-    if device_arg == 'cpu':
-        train_kwargs['batch'] = 2
-        train_kwargs['workers'] = 0
+    print(f"Starting YOLO11 training using {base_model} for {epochs} epochs")
+    model = YOLO(base_model)
 
     try:
         model.train(**train_kwargs)
-    except Exception as e:
-        err_str = str(e)
-        print("Training failed with error:\n", err_str)
-        if 'cuda' in err_str.lower() or 'cudnn' in err_str.lower() or 'acceleratorerror' in err_str.lower() or 'unknown error' in err_str.lower():
-            print("Detected CUDA-related error. Attempting recovery: reduce batch and retry...")
+    except RuntimeError as exc:
+        error_message = str(exc).lower()
+        if "cuda" in error_message or "cudnn" in error_message or "out of memory" in error_message:
+            print("CUDA-related training failure detected. Retrying with smaller batch size and CPU offload fallback.")
+            torch.cuda.empty_cache()
+            train_kwargs["batch"] = max(1, train_kwargs["batch"] // 2)
+            train_kwargs["workers"] = 0
+            train_kwargs["device"] = 0 if torch.cuda.is_available() else "cpu"
             try:
-                try:
-                    torch.cuda.empty_cache()
-                except Exception:
-                    pass
-                if train_kwargs.get('batch', 0) > 1:
-                    train_kwargs['batch'] = max(1, train_kwargs['batch'] // 2)
                 model.train(**train_kwargs)
-            except Exception:
-                print("Retry with smaller batch also failed. Falling back to CPU training.")
-                train_kwargs['device'] = 'cpu'
-                train_kwargs['batch'] = 2
-                train_kwargs['workers'] = 0
+            except RuntimeError:
+                print("Retry failed. Falling back to CPU training.")
+                train_kwargs["device"] = "cpu"
+                train_kwargs["batch"] = 2
+                train_kwargs["amp"] = False
                 model.train(**train_kwargs)
-        else:
-            raise
+            return
+        raise
 
-    print("Training complete. Model saved in runs/license_plate_detector/weights/best.pt")
+    print(f"Training complete. Best weights saved in {project_root / project / name / 'weights' / 'best.pt'}")
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Train YOLO11 on license plate dataset")
-    parser.add_argument('--epochs', type=int, default=1, help='Number of epochs to train')
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train YOLO11 on the ANPR license plate dataset")
+    parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
+    parser.add_argument("--imgsz", type=int, default=640, help="Input image size for training")
+    parser.add_argument("--batch", type=int, default=8, help="Training batch size")
+    parser.add_argument("--workers", type=int, default=4, help="Data loader workers")
+    parser.add_argument(
+        "--base-model",
+        type=str,
+        default="yolo11n.pt",
+        help="YOLO11 base checkpoint to fine-tune (recommended: yolo11n.pt for GTX 1650)",
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="auto",
+        help="Device to use: auto, cpu, mps, cuda, or an integer GPU index such as 0",
+    )
     args = parser.parse_args()
-    
-    train(epochs=args.epochs)
+
+    train(
+        epochs=args.epochs,
+        imgsz=args.imgsz,
+        batch=args.batch,
+        workers=args.workers,
+        base_model=args.base_model,
+        device_arg=args.device,
+    )
