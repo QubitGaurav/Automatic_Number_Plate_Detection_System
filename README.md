@@ -5,12 +5,10 @@ KnightSight is a modular, edge-optimized Automatic Number Plate Recognition (ANP
 ## Features
 
 - **End-to-End Pipeline**: Seamlessly integrates vehicle detection, plate localization, and OCR.
-- **Edge-Optimized**: Designed to run efficiently using lightweight models (like YOLOv8n) suitable for edge devices.
+- **Edge-Optimized**: Designed to run efficiently using lightweight models (like YOLO11n) suitable for edge devices.
 - **Modular Architecture**: Separate components for vehicle detection, plate detection, and the ANPR OCR engine, making it easy to swap models or update specific parts of the pipeline.
 - **Interactive Dashboard**: Includes a Streamlit-based web interface to easily upload images, run inference, and visualize bounding boxes and recognized text.
-- **Custom Training Ready**: Contains scripts for converting JSON dataset annotations to YOLO format and fine-tuning YOLOv8 for custom license plate detection.
-
-```
+- **Custom Training Ready**: Contains scripts for converting JSON dataset annotations to YOLO format and fine-tuning YOLO11 for custom license plate detection.
 
 ## Setup & Installation
 
@@ -24,7 +22,7 @@ KnightSight is a modular, edge-optimized Automatic Number Plate Recognition (ANP
    ```
 
 3. **Install Dependencies**
-   The project requires PyTorch, Ultralytics YOLOv8, OpenCV, Streamlit, and OCR engines.
+   The project requires PyTorch, Ultralytics YOLO11, OpenCV, Streamlit, and OCR engines.
    ```bash
    pip install -r requirements.txt
    ```

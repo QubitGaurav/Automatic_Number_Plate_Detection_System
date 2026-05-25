@@ -74,6 +74,17 @@ def train(
 
     convert_json_to_yolo(str(dataset_dir))
 
+    import yaml
+    try:
+        with open(data_yaml_path, 'r') as f:
+            yaml_content = yaml.safe_load(f) or {}
+        yaml_content['path'] = str(dataset_dir.resolve())
+        with open(data_yaml_path, 'w') as f:
+            yaml.safe_dump(yaml_content, f)
+        print(f"Updated dataset path in {data_yaml_path} to absolute: {yaml_content['path']}")
+    except Exception as e:
+        print(f"Warning: Could not update data.yaml path dynamically: {e}")
+
     device = resolve_device(device_arg)
     print(f"Using device: {get_device_name(device)}")
 

@@ -2,13 +2,14 @@ import os
 import json
 from PIL import Image
 
-def convert_json_to_yolo():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.dirname(script_dir)
+def convert_json_to_yolo(dataset_dir=None):
+    if dataset_dir is None:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        root_dir = os.path.dirname(script_dir)
+        dataset_dir = os.path.join(root_dir, 'Dataset')
     
-    # Use the repository's Dataset/ folder (matches README and workspace)
-    labels_dir = os.path.join(root_dir, 'Dataset', 'labels')
-    images_dir = os.path.join(root_dir, 'Dataset', 'images')
+    labels_dir = os.path.join(dataset_dir, 'labels')
+    images_dir = os.path.join(dataset_dir, 'images')
     # Ensure the labels directory exists; create it if missing
     if not os.path.isdir(labels_dir):
         os.makedirs(labels_dir, exist_ok=True)

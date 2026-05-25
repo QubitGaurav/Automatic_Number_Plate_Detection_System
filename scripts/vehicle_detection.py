@@ -13,12 +13,12 @@ from ultralytics import YOLO
 class VehicleDetector:
     """Simple wrapper around a YOLO model to detect vehicles.
 
-    The underlying model is a YOLOv8 nano checkpoint (yolov8n.pt) which is
-    lightweight (≈ 6.5 MB) and works well on CPU. It detects the COCO vehicle
+    The underlying model is a YOLO11 nano checkpoint (yolo11n.pt) which is
+    lightweight (≈ 5.5 MB) and works well on CPU. It detects the COCO vehicle
     classes: car, motorcycle, bus and truck.
     """
 
-    def __init__(self, model_path: str = "yolov8n.pt") -> None:
+    def __init__(self, model_path: str = "yolo11n.pt") -> None:
         # Load the YOLO model – the library will download the weights if missing.
         self.model = YOLO(model_path)
 
@@ -62,7 +62,7 @@ def get_model_size(detector: VehicleDetector) -> dict:
         - ``mb``: size in megabytes (rounded to 2 decimal places)
         - ``kb``: size in kilobytes (rounded to 2 decimal places)
     """
-    model_path = getattr(detector.model, 'ckpt_path', 'yolov8n.pt')
+    model_path = getattr(detector.model, 'ckpt_path', 'yolo11n.pt')
     if not model_path or not os.path.exists(model_path):
         return {"mb": 0.0, "kb": 0.0}
         
