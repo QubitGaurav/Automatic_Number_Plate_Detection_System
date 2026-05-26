@@ -112,3 +112,7 @@ Built using Ultralytics YOLO11, Streamlit, and EasyOCR.
 
 ## Dataset
 https://drive.google.com/file/d/1WpOjFnPfj-tfmHrUaJ7ypQLUsFqrJhAx/view?usp=sharing
+
+## Output Preview
+<img width="1915" height="908" alt="Screenshot 2026-05-26 183105" src="https://github.com/user-attachments/assets/4a5ff6e5-e67d-4e14-a2f9-d0b7cb5466cc" />
+
