@@ -1,6 +1,6 @@
 names:
   0: license_plate
 nc: 1
-path: /home/neo/Documents/ANPR/Dataset
+path: C:\Users\qubit\OneDrive\Documents\ANPR\Dataset
 train: images
 val: images
