@@ -9,3 +9,5 @@ pyyaml>=6.0
 easyocr>=1.7.2
 streamlit>=1.40.0
 pytesseract>=0.3.13
+libgl1
+tesseract-ocr
